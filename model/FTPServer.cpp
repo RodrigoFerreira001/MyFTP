@@ -235,7 +235,7 @@ void FTPServer::start(){
 		cout << "Aguardando conexão..." << endl;
 
         server_socket->bind();
-        server_socket->listen(1);
+        server_socket->listen(5);
         server_socket->accept();
 
 		cout << "Conexão estabelecida, aguardando usuário e senha..." << endl;
@@ -297,7 +297,7 @@ void FTPServer::start(){
 	            }
         	}
         }else{
-			//cout << "Usuário e senha não aceitos, tente novamente!" << endl;
+			cout << "Usuário e senha não aceitos, tente novamente!" << endl;
             //Usuário e senha não conferem
             memset(buffer, '\0', *buffer_size);
             msg = "NOT_OK";

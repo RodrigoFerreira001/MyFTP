@@ -1,44 +1,102 @@
 #include "FTPClient.hpp"
 
 FTPClient::FTPClient(string ip, int port, int buffer_size){
-    client_socket = new Socket(ip, port);
-    client_socket->connect();
+    client_socket = NULL;
     directory = new Directory(".");
     this->buffer_size = new int(buffer_size);
+	this->ip = new string(ip);
+	this->port = new int(port);
+	is_connected = new bool(false);
+
 }
 
 FTPClient::~FTPClient(){
-    client_socket->close(0);
-    delete client_socket;
+	if(client_socket != NULL){
+		client_socket->close(0);
+	    delete client_socket;
+	}
+
     delete directory;
     delete buffer_size;
+	delete is_connected;
+}
+
+bool FTPClient::get_status(){
+	return *is_connected;
+}
+
+int FTPClient::connect(){
+	client_socket = new Socket(*ip, *port);
+
+	if(!(*is_connected)){
+		if(client_socket->connect() == 0){
+			*is_connected = true;
+			return 1;
+		}else{
+			*is_connected = false;
+			delete client_socket;
+			return 0;
+		}
+	}
+}
+
+int FTPClient::disconnect(){
+	if(*is_connected){
+		if(client_socket->close(0) == 0){
+			*is_connected = false;
+			return 1;
+		}else{
+			return 0;
+		}
+	}
+
 }
 
 int FTPClient::login(string user, string passwd){
     string msg;
     char* buffer = new char[*buffer_size];
 
-    //Copia o nome do usuário para o buffer e envia
-    memset(buffer, '\0', *buffer_size);
-    user.copy(buffer, user.size(), 0);
-    client_socket->send(0, buffer, *buffer_size);
+	if(*is_connected){
+		//Copia o nome do usuário para o buffer e envia
+	    memset(buffer, '\0', *buffer_size);
+	    user.copy(buffer, user.size(), 0);
+	    client_socket->send(0, buffer, *buffer_size);
 
-    //Copia a senha para o buffer e envia
-    memset(buffer, '\0', *buffer_size);
-    passwd.copy(buffer, passwd.size(), 0);
-    client_socket->send(0, buffer, *buffer_size);
+	    //Copia a senha para o buffer e envia
+	    memset(buffer, '\0', *buffer_size);
+	    passwd.copy(buffer, passwd.size(), 0);
+	    client_socket->send(0, buffer, *buffer_size);
 
-    memset(buffer, '\0', *buffer_size);
-    client_socket->recv(0, buffer, *buffer_size);
-    msg = string(buffer);
+	    memset(buffer, '\0', *buffer_size);
+	    client_socket->recv(0, buffer, *buffer_size);
+	    msg = string(buffer);
 
-    if(msg == "OK"){
-		delete buffer;
-        return 1;
-    }else{
-		delete buffer;
-        return 0;
-    }
+	    if(msg == "OK"){
+			delete buffer;
+	        return 1;
+	    }else{
+			delete buffer;
+	        return 0;
+	    }
+	}else{
+		return 0;
+	}
+}
+
+void FTPClient::exit(){
+	char* buffer = new char[*buffer_size];
+	string msg;
+
+	if(*is_connected){
+		memset(buffer, '\0', *buffer_size);
+		msg = "exit";
+		msg.copy(buffer, msg.size(), 0);
+		client_socket->send(0, buffer, *buffer_size);
+		client_socket->close(0);
+		*is_connected = false;
+	}
+
+	delete buffer;
 }
 
 int FTPClient::get(string file_name){
@@ -286,17 +344,4 @@ vector<string>* FTPClient::lls(string dir_name){
 	}else{
 		return directory->get_dir_list();
 	}
-}
-
-void FTPClient::exit(){
-	char* buffer = new char[*buffer_size];
-	string msg;
-
-	memset(buffer, '\0', *buffer_size);
-	msg = "exit";
-	msg.copy(buffer, msg.size(), 0);
-	client_socket->send(0, buffer, *buffer_size);
-
-	client_socket->close(0);
-	delete buffer;
 }

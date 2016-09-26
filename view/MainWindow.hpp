@@ -41,7 +41,7 @@ private:
 public:
 	MainWindow();
 	~MainWindow();
-
+	
 	Button* get_config_button();
 	Entry* get_user_entry();
 	Entry* get_passwd_entry();
@@ -57,5 +57,4 @@ public:
 	Button* get_get_button();
 	Button* get_put_button();
 	TextView* get_connection_log();
-
 };

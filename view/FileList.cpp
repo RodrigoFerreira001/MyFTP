@@ -1,10 +1,12 @@
 #include "FileList.hpp"
+#include <iostream>
+using namespace std;
 
 void FileList::insert(vector<string>* dir_content){
 	for(int i = 0; i < dir_content->size(); i++){
 		string name = dir_content->at(i);
 		Item* item;
-
+		
 		if(name.back() == '/'){
 			name.pop_back();
 			item = new Item(name, "folder");

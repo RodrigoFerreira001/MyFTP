@@ -7,7 +7,6 @@ private:
 	FTPClient* ftp_client;
 	MainWindow* main_window;
 	void login_logout();
-
 public:
 	MainWindowControl(FTPClient* ftp_client, MainWindow* main_window);
 	void connect();

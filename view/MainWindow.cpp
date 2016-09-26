@@ -40,6 +40,7 @@ MainWindow::MainWindow(){
 	passwd_entry->set_visibility(false);
 
 	connect_disconnect = new ToggleButton("Conectar");
+	connect_disconnect->set_size_request(150, -1);
 	connect_disconnect->set_tooltip_text("Conectar/Disconectar");
 
 	local_refresh = new Button;
