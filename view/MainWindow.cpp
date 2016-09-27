@@ -100,7 +100,7 @@ MainWindow::MainWindow(){
 	connection_log->set_editable(false);
 
 	//Configura o HeaderBar
-	header->set_title("MainWindow");
+	header->set_title("MyFTP");
 	header->set_show_close_button(true);
 	header->pack_start(*config_button);
 	header->show_all_children();
@@ -172,6 +172,7 @@ MainWindow::MainWindow(){
 	local_scroll->set_size_request(-1, 200);
 
 	//Fill action box
+	put_button->set_margin_bottom(6);
 	action_box->pack_start(*action_box_up, true, true);
 	action_box->pack_start(*put_button, false, false);
 	action_box->pack_start(*get_button, false, false);
