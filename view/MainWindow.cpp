@@ -87,13 +87,13 @@ MainWindow::MainWindow(){
 	get_button = new Button;
 	get_button->set_tooltip_text("Obter Arquivo Selecionado");
 	Image* get_button_img = new Image;
-	get_button_img->set_from_icon_name("go-next-symbolic", IconSize(GTK_ICON_SIZE_BUTTON));
+	get_button_img->set_from_icon_name("go-previous-symbolic", IconSize(GTK_ICON_SIZE_BUTTON));
 	get_button->set_image(*get_button_img);
 
 	put_button = new Button;
 	put_button->set_tooltip_text("Enviar Arquivo Selecionado");
 	Image* put_button_img = new Image;
-	put_button_img->set_from_icon_name("go-previous-symbolic", IconSize(GTK_ICON_SIZE_BUTTON));
+	put_button_img->set_from_icon_name("go-next-symbolic", IconSize(GTK_ICON_SIZE_BUTTON));
 	put_button->set_image(*put_button_img);
 
 	connection_log = new TextView;

@@ -16,8 +16,6 @@ Socket::~Socket(){
     delete addr;
     delete my_socket;
     delete new_socket;
-    delete ip;
-    delete port;
 }
 
 //Main methods

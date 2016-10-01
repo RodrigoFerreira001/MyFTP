@@ -23,5 +23,4 @@ public:
 
 	void set_type(string type);
 	string get_type();
-
 };

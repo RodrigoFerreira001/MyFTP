@@ -84,197 +84,202 @@ int FTPClient::login(string user, string passwd){
 }
 
 void FTPClient::exit(){
-	char* buffer = new char[*buffer_size];
-	string msg;
-
 	if(*is_connected){
+		char* buffer = new char[*buffer_size];
+		string msg;
+
 		memset(buffer, '\0', *buffer_size);
 		msg = "exit";
 		msg.copy(buffer, msg.size(), 0);
 		client_socket->send(0, buffer, *buffer_size);
 		client_socket->close(0);
 		*is_connected = false;
-	}
 
-	delete buffer;
+		delete buffer;
+	}
 }
 
 int FTPClient::get(string file_name){
+	if(*is_connected){
+	    string msg;
+	    char* buffer = new char[*buffer_size];
+	    FileBuffer* file;
+	    int file_size;
+	    stringstream* ss;
 
-	cout << "get: " << file_name << endl;
+	    //Envia comando get
+	    memset(buffer, '\0', *buffer_size);
+	    msg = "get";
+	    msg.copy(buffer, msg.size(), 0);
+	    client_socket->send(0, buffer, *buffer_size);
 
-    string msg;
-    char* buffer = new char[*buffer_size];
-    FileBuffer* file;
-    int file_size;
-    stringstream* ss;
+	    //Envia argumento
+	    memset(buffer, '\0', *buffer_size);
+	    file_name.copy(buffer, file_name.size(), 0);
+	    client_socket->send(0, buffer, *buffer_size);
 
-    //Envia comando get
-    memset(buffer, '\0', *buffer_size);
-    msg = "get";
-    msg.copy(buffer, msg.size(), 0);
-    client_socket->send(0, buffer, *buffer_size);
+	    //Recebe mensagem de confirmação
+	    memset(buffer, '\0', *buffer_size);
+	    client_socket->recv(0, buffer, *buffer_size);
+	    msg = string(buffer);
 
-    //Envia argumento
-    memset(buffer, '\0', *buffer_size);
-    file_name.copy(buffer, file_name.size(), 0);
-    client_socket->send(0, buffer, *buffer_size);
+	    if(msg == "OK"){
+	        //Recebe o tamanho do arquivo
+	        memset(buffer, '\0', *buffer_size);
+	        client_socket->recv(0, buffer, *buffer_size);
+	        ss = new stringstream(buffer);
+	        *(ss) >> file_size;
+	        delete ss;
 
-    //Recebe mensagem de confirmação
-    memset(buffer, '\0', *buffer_size);
-    client_socket->recv(0, buffer, *buffer_size);
-    msg = string(buffer);
+			cout << "Arquivo: " << file_name << ", Tamanho: " << file_size << endl;
+	        //Recebe os pacotes inteiros
+	        file = new FileBuffer(file_name, *buffer_size, file_size);
 
-    if(msg == "OK"){
-        //Recebe o tamanho do arquivo
-        memset(buffer, '\0', *buffer_size);
-        client_socket->recv(0, buffer, *buffer_size);
-        ss = new stringstream(buffer);
-        *(ss) >> file_size;
-        delete ss;
+			for(int i = 0; i < file->packages_number(); i++){
+		    	memset(buffer, '\0', *buffer_size);
+		    	client_socket->recv(0, buffer, *buffer_size);
 
-		cout << "Arquivo: " << file_name << ", Tamanho: " << file_size << endl;
-        //Recebe os pacotes inteiros
-        file = new FileBuffer(file_name, *buffer_size, file_size);
+		    	for(int j = 0; j < *buffer_size; j++){
+		        	file->append_byte(buffer[j]);
+		        }
+				file->write_to_file();
+		   	}
 
-		for(int i = 0; i < file->packages_number(); i++){
-	    	memset(buffer, '\0', *buffer_size);
-	    	client_socket->recv(0, buffer, *buffer_size);
-
-	    	for(int j = 0; j < *buffer_size; j++){
-	        	file->append_byte(buffer[j]);
+	        //Recebe os bytes restantes
+	        memset(buffer, '\0', *buffer_size);
+	        client_socket->recv(0, buffer, file->remaining_bytes());
+	        for(int i = 0; i < file->remaining_bytes(); i++){
+	            file->append_byte(buffer[i]);
 	        }
-			file->write_to_file();
-	   	}
 
-        //Recebe os bytes restantes
-        memset(buffer, '\0', *buffer_size);
-        client_socket->recv(0, buffer, file->remaining_bytes());
-        for(int i = 0; i < file->remaining_bytes(); i++){
-            file->append_byte(buffer[i]);
-        }
+	        //Escreve arquivo para arquivo
+	        file->write_to_file();
+			file->finish_write();
+			cout << "Operação concluída com sucesso!" << endl;
 
-        //Escreve arquivo para arquivo
-        file->write_to_file();
-		file->finish_write();
-		cout << "Operação concluída com sucesso!" << endl;
-
-		delete file;
-		delete buffer;
-        return 1;
-    }else{
-		cout << "Algum erro ocorreu, verifique o arquivo e tente novamente\n";
-		delete buffer;
-        return 0;
-    }
-
-}
-
-int FTPClient::put(string file_name){
-    char* buffer = new char[*buffer_size];
-    stringstream* ss;
-    string msg;
-
-	Directory* tmp_dir = new Directory(".");
-	vector<string>* tmp_dir_c = tmp_dir->get_dir_list();
-	string file_name_tmp;
-	bool is_folder = false;
-
-	if(file_name.back() != '/'){
-		file_name_tmp = file_name + "/";
-	}else{
-		file_name_tmp = file_name;
-	}
-
-	for(int i = 0; i < tmp_dir_c->size(); i++){
-		if(tmp_dir_c->at(i) == file_name_tmp){
-			is_folder = true;
-			break;
-		}
-	}
-
-	cout << "put: " << file_name << endl;
-    //Envia comando put
-    memset(buffer, '\0', *buffer_size);
-    msg = "put";
-    msg.copy(buffer, msg.size(), 0);
-    client_socket->send(0, buffer, *buffer_size);
-
-    //Envia argumento
-    memset(buffer, '\0', *buffer_size);
-    file_name.copy(buffer, file_name.size(), 0);
-    client_socket->send(0, buffer, *buffer_size);
-
-    FileBuffer* file = new FileBuffer(file_name.c_str(), *buffer_size, 0);
-    if(file->open_file() && !is_folder){
-        memset(buffer, '\0', *buffer_size);
-        msg = "OK";
-        msg.copy(buffer, msg.size(), 0);
-
-		client_socket->send(0, buffer, *buffer_size);
-        //Envia o tamanho do arquivo
-        memset(buffer, '\0', *buffer_size);
-        ss = new stringstream();
-        *(ss) << file->file_size();
-        *(ss) >> buffer;
-        delete ss;
-        client_socket->send(0, buffer, *buffer_size);
-
-
-		for(int i = 0; i < file->packages_number(); i++){
-	    	file->read_file(buffer, *buffer_size);
-	        client_socket->send(0, buffer, *buffer_size);
-	   	}
-
-        file->read_file(buffer, file->remaining_bytes());
-        client_socket->send(0, buffer, file->remaining_bytes());
-
-		cout << "Transferência concluída!" << endl;
-
-		delete file;
-		delete tmp_dir;
-		delete buffer;
-
-        return 1;
-    }else{
-		cout << "Arquivo inexistente, tente novamente!" << endl;
-        memset(buffer, '\0', *buffer_size);
-        msg = "NOT_OK";
-        msg.copy(buffer, msg.size(), 0);
-        client_socket->send(0, buffer, *buffer_size);
-
-		delete file;
-		delete tmp_dir;
-		delete buffer;
-
-        return 0;
-    }
-}
-
-int FTPClient::cd(string dir_name){
-	char* buffer = new char[*buffer_size];
-	string msg;
-
-	memset(buffer, '\0', *buffer_size);
-	msg = "cd";
-	msg.copy(buffer, msg.size(), 0);
-	client_socket->send(0, buffer, *buffer_size);
-
-	memset(buffer, '\0', *buffer_size);
-	dir_name.copy(buffer, dir_name.size(), 0);
-	client_socket->send(0, buffer, *buffer_size);
-
-	memset(buffer, '\0', *buffer_size);
-	client_socket->recv(0, buffer, *buffer_size);
-	msg = string(buffer);
-
-	if(msg == "OK"){
-		return 1;
+			delete file;
+			delete buffer;
+	        return 1;
+	    }else{
+			cout << "Algum erro ocorreu, verifique o arquivo e tente novamente\n";
+			delete buffer;
+	        return 0;
+	    }
 	}else{
 		return 0;
 	}
+}
 
-	delete buffer;
+int FTPClient::put(string file_name){
+	if(*is_connected){
+		char* buffer = new char[*buffer_size];
+	    stringstream* ss;
+	    string msg;
+
+		Directory* tmp_dir = new Directory(".");
+		vector<string>* tmp_dir_c = tmp_dir->get_dir_list();
+		string file_name_tmp;
+		bool is_folder = false;
+
+		if(file_name.back() != '/'){
+			file_name_tmp = file_name + "/";
+		}else{
+			file_name_tmp = file_name;
+		}
+
+		for(int i = 0; i < tmp_dir_c->size(); i++){
+			if(tmp_dir_c->at(i) == file_name_tmp){
+				is_folder = true;
+				break;
+			}
+		}
+
+		cout << "put: " << file_name << endl;
+	    //Envia comando put
+	    memset(buffer, '\0', *buffer_size);
+	    msg = "put";
+	    msg.copy(buffer, msg.size(), 0);
+	    client_socket->send(0, buffer, *buffer_size);
+
+	    //Envia argumento
+	    memset(buffer, '\0', *buffer_size);
+	    file_name.copy(buffer, file_name.size(), 0);
+	    client_socket->send(0, buffer, *buffer_size);
+
+	    FileBuffer* file = new FileBuffer(file_name.c_str(), *buffer_size, 0);
+	    if(file->open_file() && !is_folder){
+	        memset(buffer, '\0', *buffer_size);
+	        msg = "OK";
+	        msg.copy(buffer, msg.size(), 0);
+
+			client_socket->send(0, buffer, *buffer_size);
+	        //Envia o tamanho do arquivo
+	        memset(buffer, '\0', *buffer_size);
+	        ss = new stringstream();
+	        *(ss) << file->file_size();
+	        *(ss) >> buffer;
+	        delete ss;
+	        client_socket->send(0, buffer, *buffer_size);
+
+			for(int i = 0; i < file->packages_number(); i++){
+		    	file->read_file(buffer, *buffer_size);
+		        client_socket->send(0, buffer, *buffer_size);
+		   	}
+
+			cout << "Enviando ultimo pacote" << endl;
+	        file->read_file(buffer, file->remaining_bytes());
+	        client_socket->send(0, buffer, file->remaining_bytes());
+
+			cout << "Transferência concluída!" << endl;
+
+			delete file;
+			delete tmp_dir;
+			delete buffer;
+
+	        return 1;
+	    }else{
+			cout << "Arquivo inexistente, tente novamente!" << endl;
+	        memset(buffer, '\0', *buffer_size);
+	        msg = "NOT_OK";
+	        msg.copy(buffer, msg.size(), 0);
+
+			delete file;
+			delete tmp_dir;
+			delete buffer;
+
+	        return 0;
+	    }
+	}else{
+		return 0;
+	}
+}
+
+int FTPClient::cd(string dir_name){
+	if(*is_connected){
+		char* buffer = new char[*buffer_size];
+		string msg;
+
+		memset(buffer, '\0', *buffer_size);
+		msg = "cd";
+		msg.copy(buffer, msg.size(), 0);
+		client_socket->send(0, buffer, *buffer_size);
+
+		memset(buffer, '\0', *buffer_size);
+		dir_name.copy(buffer, dir_name.size(), 0);
+		client_socket->send(0, buffer, *buffer_size);
+
+		memset(buffer, '\0', *buffer_size);
+		client_socket->recv(0, buffer, *buffer_size);
+		msg = string(buffer);
+
+		if(msg == "OK"){
+			return 1;
+		}else{
+			return 0;
+		}
+
+		delete buffer;
+	}
 }
 
 int FTPClient::lcd(string dir_name){
@@ -286,47 +291,49 @@ int FTPClient::lcd(string dir_name){
 }
 
 vector<string>* FTPClient::ls(string dir_name){
-	char* buffer = new char[*buffer_size];
-	vector<string>* dir_content = new vector<string>;
-	int dir_size;
-	string msg;
-	stringstream* ss;
+	if(*is_connected){
+		char* buffer = new char[*buffer_size];
+		vector<string>* dir_content = new vector<string>;
+		int dir_size;
+		string msg;
+		stringstream* ss;
 
-	//Envia o comando ls
-	memset(buffer, '\0', *buffer_size);
-	msg = "ls";
-	msg.copy(buffer, msg.size(), 0);
-	client_socket->send(0, buffer, *buffer_size);
+		//Envia o comando ls
+		memset(buffer, '\0', *buffer_size);
+		msg = "ls";
+		msg.copy(buffer, msg.size(), 0);
+		client_socket->send(0, buffer, *buffer_size);
 
-	//Envia o argumento
-	memset(buffer, '\0', *buffer_size);
-	dir_name.copy(buffer, dir_name.size(), 0);
-	client_socket->send(0, buffer, *buffer_size);
+		//Envia o argumento
+		memset(buffer, '\0', *buffer_size);
+		dir_name.copy(buffer, dir_name.size(), 0);
+		client_socket->send(0, buffer, *buffer_size);
 
-	//Recebe mensagem de confirmação
-	memset(buffer, '\0', *buffer_size);
-	client_socket->recv(0, buffer, *buffer_size);
-	msg = string(buffer);
-
-	if(msg == "OK"){
-		//Recebe o tamanho do arquivo
+		//Recebe mensagem de confirmação
 		memset(buffer, '\0', *buffer_size);
 		client_socket->recv(0, buffer, *buffer_size);
-		ss = new stringstream(buffer);
-		*(ss) >> dir_size;
-		delete ss;
+		msg = string(buffer);
 
-		//Recebe os diretórios
-		for(int i = 0; i < dir_size; i++){
+		if(msg == "OK"){
+			//Recebe o tamanho do arquivo
 			memset(buffer, '\0', *buffer_size);
 			client_socket->recv(0, buffer, *buffer_size);
-			msg = string(buffer);
-			dir_content->push_back(msg);
-		}
-	}
+			ss = new stringstream(buffer);
+			*(ss) >> dir_size;
+			delete ss;
 
-	delete buffer;
-	return dir_content;
+			//Recebe os diretórios
+			for(int i = 0; i < dir_size; i++){
+				memset(buffer, '\0', *buffer_size);
+				client_socket->recv(0, buffer, *buffer_size);
+				msg = string(buffer);
+				dir_content->push_back(msg);
+			}
+		}
+
+		delete buffer;
+		return dir_content;
+	}
 }
 
 vector<string>* FTPClient::lls(string dir_name){

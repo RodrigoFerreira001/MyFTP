@@ -14,8 +14,6 @@ private:
     sockaddr_in* addr;
     int* my_socket;
     int* new_socket;
-    string* ip;
-    int* port;
 
 public:
     //Constructor and Destructor
